@@ -6,9 +6,9 @@ How to Run-
 2. the code would ask to input the coordinates of both the start and goal point
 
 List of library-
- numpy as np
- heapq
-math
- cv2
-from google.colab.patches import cv2_imshow
-time
+1. numpy as np
+2. heapq
+3. math
+4. cv2
+5. from google.colab.patches import cv2_imshow
+6. time
