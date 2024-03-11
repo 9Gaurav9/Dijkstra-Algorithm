@@ -46,9 +46,24 @@ start_y = int(input("Enter the y-coordinate for the start point: "))
 goal_x = int(input("Enter the x-coordinate for the goal point: "))
 goal_y = int(input("Enter the y-coordinate for the goal point: "))
 
+# Check if start and goal points are inside obstacles
+start_point = (start_x, start_y)
+goal_point = (goal_x, goal_y)
+
+def is_inside_obstacle(point):
+    x, y = point
+    for obs in [obs1, obs2, obs3, obs4, obs5]:
+        if obs[y, x, 0] == 0:  # Check if the point is inside the obstacle
+            return True
+    return False
+
+if is_inside_obstacle(start_point) or is_inside_obstacle(goal_point):
+    print("Error: Start or goal point is inside an obstacle.")
+    exit()
+
 # Define start and goal points
-start = (start_x, start_y)
-goal = (goal_x, goal_y)
+start = start_point
+goal = goal_point
 video_name = "exploration_video.avi"  # Define the video name here
 
 # Define the action set
@@ -58,9 +73,25 @@ actions = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1)]
 action_costs = {action: math.sqrt(action[0]**2 + action[1]**2) if action[0] != 0 and action[1] != 0 else 1 for action in actions}
 
 # Function to check if a node is valid (inside the grid and not an obstacle)
+# Function to check if a node is valid (inside the grid and not an obstacle)
 def is_valid(node):
     x, y = node
-    return 0 <= x < map_width and 0 <= y < map_height and map_img[y, x, 0] != 0
+    # Check if the node is within the map boundaries
+    if not (0 <= x < map_width and 0 <= y < map_height):
+        return False
+    # Check if the node is inside the hexagon
+    for i in range(6):
+        x1, y1 = vertices[i]
+        x2, y2 = vertices[(i + 1) % 6]
+        if (y1 <= y <= y2 or y2 <= y <= y1) and x >= min(x1, x2) and x <= max(x1, x2):
+            if (y - y1) * (x2 - x1) > (y2 - y1) * (x - x1):
+                return False
+    # Check if the node is an obstacle
+    for obs in [obs1, obs2, obs3, obs4, obs5]:
+        if obs[y, x, 0] == 0:  # Check if the point is inside the obstacle
+            return False
+    return True
+
 
 # Function to generate the graph considering obstacles
 def generate_graph():
