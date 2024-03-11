@@ -3,6 +3,7 @@ import heapq
 import math
 import cv2
 from google.colab.patches import cv2_imshow
+import time
 
 # Define the map dimensions
 map_width = 1200
@@ -39,10 +40,22 @@ for i in range(6):
 # Draw the hexagon on the canvas
 obs6 = cv2.polylines(map_img, [np.array(vertices)], isClosed=True, color=obstacle_color, thickness=1)
 
+# Prompt the user to input start and goal points
+start_x = int(input("Enter the x-coordinate for the start point: "))
+start_y = int(input("Enter the y-coordinate for the start point: "))
+goal_x = int(input("Enter the x-coordinate for the goal point: "))
+goal_y = int(input("Enter the y-coordinate for the goal point: "))
+
 # Define start and goal points
-start = (50, 50)
-goal = (50, 400)
+start = (start_x, start_y)
+goal = (goal_x, goal_y)
 video_name = "exploration_video.avi"  # Define the video name here
+
+# Define the action set
+actions = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1)]
+
+# Define the cost for each action
+action_costs = {action: math.sqrt(action[0]**2 + action[1]**2) if action[0] != 0 and action[1] != 0 else 1 for action in actions}
 
 # Function to check if a node is valid (inside the grid and not an obstacle)
 def is_valid(node):
@@ -55,8 +68,7 @@ def generate_graph():
     for i in range(map_width):
         for j in range(map_height):
             if is_valid((i, j)):
-                neighbors = {(i + dx, j + dy) for dx in range(-1, 2) for dy in range(-1, 2)}
-                neighbors.discard((i, j))  # Remove the current node from neighbors
+                neighbors = {(i + dx, j + dy) for dx, dy in actions}
                 neighbors = {n for n in neighbors if is_valid(n)}
                 graph[(i, j)] = neighbors
     return graph
@@ -65,13 +77,7 @@ def generate_graph():
 def calculate_costs(graph):
     costs = {}
     for node, neighbors in graph.items():
-        costs[node] = {}
-        for neighbor in neighbors:
-            dx, dy = neighbor[0] - node[0], neighbor[1] - node[1]
-            if dx != 0 and dy != 0:
-                costs[node][neighbor] = math.sqrt(2)
-            else:
-                costs[node][neighbor] = 1
+        costs[node] = {neighbor: action_costs[(neighbor[0] - node[0], neighbor[1] - node[1])] for neighbor in neighbors}
     return costs
 
 # Dijkstra's algorithm to find the shortest path
@@ -101,6 +107,10 @@ def dijkstra(graph, start, goal, video_name):
         map_img[node[1], node[0]] = (0, 0, 255)  # Mark explored node as green
         out.write(map_img)  # Save frame as image
 
+    # Connect start and end points
+    cv2.line(map_img, start, goal, (0, 255, 0), 2)
+    out.write(map_img)
+
     # Release the VideoWriter object
     out.release()
 
@@ -123,9 +133,16 @@ def run_dijkstra(start, goal, video_name):
         return None
     global costs
     costs = calculate_costs(graph)
+
+    start_time = time.time()  # Record the start time
+
     distances = dijkstra(graph, start, goal, video_name)
+
+    end_time = time.time()  # Record the end time
+    elapsed_time = end_time - start_time  # Calculate the elapsed time
+
     path = backtrack(graph, start, goal, distances)
-    return path
+    return path, distances, elapsed_time
 
 # Function to draw the path on the grid
 def draw_path(path, map_img):
@@ -142,8 +159,11 @@ def draw_path(path, map_img):
 
 # Example usage
 if __name__ == "__main__":
-    path = run_dijkstra(start, goal, video_name)
+    path, distances, elapsed_time = run_dijkstra(start, goal, video_name)
     if path:
+        print("Optimal path:", path)
+        print("Cost:", distances[goal])
+        print("Elapsed time:", elapsed_time)  # Print the elapsed time
         path_image = draw_path(path, map_img.copy())
         cv2_imshow(path_image)
         cv2.waitKey(0)
