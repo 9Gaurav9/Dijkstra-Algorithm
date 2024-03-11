@@ -41,7 +41,8 @@ obs6 = cv2.polylines(map_img, [np.array(vertices)], isClosed=True, color=obstacl
 
 # Define start and goal points
 start = (50, 50)
-goal = (50, 70)
+goal = (50, 400)
+video_name = "exploration_video.avi"  # Define the video name here
 
 # Function to check if a node is valid (inside the grid and not an obstacle)
 def is_valid(node):
@@ -79,7 +80,10 @@ def dijkstra(graph, start, goal, video_name):
     distances = {node: math.inf for node in graph}
     distances[start] = 0
     heap = [(0, start)]
-    frame_count = 0
+
+    # Define the codec and create VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter(video_name, fourcc, 20.0, (map_width, map_height))
 
     while heap:
         dist, node = heapq.heappop(heap)
@@ -93,9 +97,12 @@ def dijkstra(graph, start, goal, video_name):
             if new_distance < distances[neighbor]:
                 distances[neighbor] = new_distance
                 heapq.heappush(heap, (new_distance, neighbor))
-        # Save the current frame as an image
-        #cv2.imwrite(f"frame_{node[0]}_{node[1]}.png", map_img)
-        frame_count += 1
+        # Record the explored node
+        map_img[node[1], node[0]] = (0, 0, 255)  # Mark explored node as green
+        out.write(map_img)  # Save frame as image
+
+    # Release the VideoWriter object
+    out.release()
 
     return distances
 
@@ -131,11 +138,10 @@ def draw_path(path, map_img):
     for node in path:
         cv2.circle(map_img, node, 2, path_color, -1)
 
-    return map_img 
+    return map_img
 
 # Example usage
 if __name__ == "__main__":
-    video_name = "exploration_video.avi"
     path = run_dijkstra(start, goal, video_name)
     if path:
         path_image = draw_path(path, map_img.copy())
